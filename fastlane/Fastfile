@@ -1,0 +1,372 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:ios)
+
+platform :ios do
+  # Development
+  desc "语法检查"
+  lane :lint_code do
+    puts("Lint code using SwfitLint")
+    swiftlint(
+      mode: :lint,
+      executable: "./Pods/SwiftLint/swiftlint",  # The SwiftLint binary path (optional). Important if you've installed it via CocoaPods
+      config_file: './Moments/.swiftlint.yml',
+      raise_if_swiftlint_error: true)
+  end
+
+  desc "格式化代码"
+  lane :format_code do
+    puts("Lint and format code using SwfitLint")
+    swiftlint(
+      mode: :autocorrect,
+      executable: "./Pods/SwiftLint/swiftlint",  # The SwiftLint binary path (optional). Important if you've installed it via CocoaPods
+      config_file: './Moments/.swiftlint.yml',
+      raise_if_swiftlint_error: true)
+  end
+
+  desc "编译开发版本"
+  lane :build_dev_app do
+    puts("Build development app")
+    gym(scheme: "",
+      workspace: "",
+      export_method: "development",
+      configuration: "Debug",
+      xcargs: "-allowProvisioningUpdates")
+  end
+
+
+  # Test
+  desc "单元测试"
+  lane :tests do
+    puts("Run the tests")
+    scan(
+      scheme: "",
+      workspace: "",
+      output_directory: "./fastlane/dist", 
+      output_types: "html", 
+      buildlog_path: "./fastlane/dist")
+  end
+
+
+  # Profile
+  desc "下载证书和描述文件"
+  lane :download_matchs do
+    
+    # 获取ApiKey
+    api_key = get_app_store_connect_api_key
+    
+    # 开发
+    match(
+      type: "development",
+      profile_name: "",
+      storage_mode: "git",
+      git_url: "",
+      app_identifier: "",
+      team_id: "",
+      api_key: api_key,
+      force: true
+    )
+    
+    # 演示
+    match(
+      type: "adhoc",
+      profile_name: "",
+      storage_mode: "git",
+      git_url: "",
+      app_identifier: "",
+      team_id: "",
+      api_key: api_key,
+      force: true
+    )
+    
+    # 商店
+    match(
+      type: "appstore",
+      storage_mode: "git",
+      git_url: "",
+      app_identifier: "",
+      team_id: "",
+      api_key: api_key
+    )
+  end
+  
+  
+  
+  desc "生成证书"
+  lane :renew_certs do
+    
+    # 获取ApiKey
+    api_key = get_app_store_connect_api_key
+    
+    # 生存证书并保存到本地，自行提交git
+    
+    # 开发
+    cert(
+      development: true,
+      force: true,
+      output_path: "./certs/development",
+      team_id: "",
+      api_key: api_key
+    )
+    
+    # 发布
+    cert(
+      development: false,
+      force: true,
+      output_path: "./certs/distribution",
+      team_id: "",
+      api_key: api_key
+    )
+    
+  end
+  
+    
+  desc "重新生产描述文件"
+  lane :renew_profiles do
+  
+    # 获取ApiKey
+    api_key = get_app_store_connect_api_key
+
+    # 生存描述文件并保存到本地，自行提交git
+    
+    # 开发
+    sigh(
+      development: true,
+      force: true,
+      output_path: "./profiles/development",
+      app_identifier: "",
+      provisioning_name: "",
+      team_id: "RSRHHRA9L7",
+      api_key: api_key
+    )
+    
+    # 演示
+    sigh(
+      adhoc: true,
+      force: true,
+      output_path: "./profiles/adhoc",
+      app_identifier: "",
+      provisioning_name: "",
+      team_id: "",
+      api_key: api_key
+    )
+    
+    # 商店
+    sigh(
+      force: true,
+      output_path: "./profiles/appstore",
+      app_identifier: "",
+      provisioning_name: "",
+      team_id: "",
+      api_key: api_key
+    )
+  end
+
+  desc "创建证书和描述文件"
+  lane :create_new_profiles do
+    api_key = get_app_store_connect_api_key
+    keychain_name = ""
+    keychain_password = ""
+
+    create_keychain(
+      name: keychain_name,
+      password: keychain_password,
+      default_keychain: false,
+      timeout: 3600,
+      unlock: true,
+    )
+          
+    match(
+      type: "development",
+      keychain_name: keychain_name,
+      keychain_password: keychain_password,
+      storage_mode: "git",
+      git_url: "",
+      app_identifier: "",
+      team_id: "",
+      api_key: api_key
+    )
+
+    match(
+      type: "adhoc",
+      keychain_name: keychain_name,
+      keychain_password: keychain_password,
+      storage_mode: "git",
+      git_url: "",
+      app_identifier: "",
+      team_id: "",
+      api_key: api_key
+    )
+
+    match(
+      type: "appstore",
+      keychain_name: keychain_name,
+      keychain_password: keychain_password,
+      storage_mode: "git",
+      git_url: "",
+      app_identifier: "",
+      team_id: "",
+      api_key: api_key
+    )
+  end
+
+  desc "销毁证书和描述文件"
+  lane :nuke_profiles do
+    api_key = get_app_store_connect_api_key
+    keychain_name = ""
+    keychain_password = ""
+
+    create_keychain(
+      name: keychain_name,
+      password: keychain_password,
+      default_keychain: false,
+      timeout: 3600,
+      unlock: true,
+    )
+
+    match_nuke(
+      type: "development",
+      keychain_name: keychain_name,
+      keychain_password: keychain_password,
+      storage_mode: "git",
+      git_url: "",
+      app_identifier: "",
+      team_id: "",
+      api_key: api_key
+    )
+
+    match_nuke(
+      type: "adhoc",
+      keychain_name: keychain_name,
+      keychain_password: keychain_password,
+      storage_mode: "git",
+      git_url: "",
+      app_identifier: "",
+      team_id: "",
+      api_key: api_key
+    )
+
+    match_nuke(
+      type: "appstore",
+      keychain_name: keychain_name,
+      keychain_password: keychain_password,
+      storage_mode: "git",
+      git_url: "",
+      app_identifier: "",
+      team_id: "",
+      api_key: api_key
+    )
+  end
+
+  desc "添加设备"
+  lane :add_device do |options|
+    name = options[:name]
+    udid = options[:udid]
+    
+    # 获取ApiKey
+    api_key = get_app_store_connect_api_key
+    # 注册设备
+    register_device(
+      name: name,
+      udid: udid,
+      team_id: "",
+      api_key: api_key
+    )
+    
+    # 解锁钥匙串
+    unlock_keychain(
+      path: "",
+      password: ""
+    )
+
+    # 开始更新演示描述文件
+    match(
+      type: "development",
+      profile_name: "",
+      force_for_new_devices: true,
+      storage_mode: "git",
+      git_url: "",
+      app_identifier: "",
+      team_id: "",
+      api_key: api_key
+    )
+    match(
+      type: "adhoc",
+      profile_name: "",
+      force_for_new_devices: true,
+      storage_mode: "git",
+      git_url: "",
+      app_identifier: "",
+      team_id: "",
+      api_key: api_key
+    )
+  end
+
+  # Archive
+  desc '打包演示版'
+  lane :archive_internal do
+
+    puts("开始执行演示版打包")
+    gym(scheme: "",
+      workspace: "",
+      export_method: "ad-hoc",
+      output_directory: "./builds/internal/",
+      xcargs: "-allowProvisioningUpdates")
+    
+    pgyer(api_key: "", user_key: "", update_description: "演示版")
+  end
+    
+  desc '打包预发布版'
+  lane :archive_release do
+
+    puts("开始执行预发布版打包")
+    gym(scheme: "",
+      workspace: "",
+      export_method: "ad-hoc",
+      output_directory: "./builds/release/",
+      xcargs: "-allowProvisioningUpdates")
+    
+    pgyer(api_key: "", user_key: "", update_description: "预发布版")
+  end
+
+  desc '打包商店版'
+  lane :archive_appstore do
+
+    puts("开始执行商店版打包")
+    gym(scheme: "",
+      workspace: "",
+      export_method: "app-store",
+      output_directory: "./builds/appstore/",
+      xcargs: "-allowProvisioningUpdates")
+    
+    # 获取ApiKey
+    api_key = get_app_store_connect_api_key
+    
+    deliver(
+      force: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      precheck_include_in_app_purchases: false,
+      api_key: api_key
+    )
+  end
+  
+  
+  desc '获取AppStoreConnect.API.key'
+  private_lane :get_app_store_connect_api_key do
+    #XXXX
+  end
+end
